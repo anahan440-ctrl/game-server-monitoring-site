@@ -179,7 +179,7 @@ export default function Index() {
           <button onClick={() => scrollTo("home")} className="flex items-center gap-2 group">
             <div className="w-5 h-5 rounded-sm" style={{ background: "var(--neon-green)", boxShadow: "0 0 10px var(--neon-green)" }} />
             <span className="text-lg font-bold tracking-widest" style={{ fontFamily: "Oswald", color: "var(--neon-green)", textShadow: "0 0 10px var(--neon-green)" }}>
-              GAMEWATCH
+              DivanMonitoring
             </span>
           </button>
 
@@ -246,7 +246,7 @@ export default function Index() {
             </div>
 
             <h1 className="text-6xl md:text-9xl font-black tracking-tight mb-4" style={{ fontFamily: "Oswald", lineHeight: 0.95 }}>
-              GAME<span style={{ color: "var(--neon-green)", textShadow: "0 0 30px rgba(0,255,65,0.6)" }}>WATCH</span>
+              Divan<span style={{ color: "var(--neon-green)", textShadow: "0 0 30px rgba(0,255,65,0.6)" }}>Monitoring</span>
             </h1>
             <p className="text-base md:text-xl text-white/40 mb-6 tracking-[0.3em] uppercase">
               Мониторинг игровых серверов в реальном времени
@@ -616,7 +616,7 @@ export default function Index() {
       {/* FOOTER */}
       <footer className="py-8 text-center" style={{ borderTop: "1px solid #151515" }}>
         <div className="font-mono-tech text-xs text-white/18 tracking-widest mb-2">
-          GAMEWATCH © 2026 — DayZ · Arma Reforger · Conan Exiles
+          DivanMonitoring © 2026 — DayZ · Arma Reforger · Conan Exiles
         </div>
         <div className="flex items-center justify-center gap-2">
           <OnlineDot />

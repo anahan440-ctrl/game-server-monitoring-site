@@ -88,7 +88,7 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
       <div className="w-full max-w-sm p-8 rounded" style={{ background: "#111", border: "1px solid #00ff4133" }}>
         <div className="flex items-center gap-2 mb-8">
           <div className="w-4 h-4 rounded-sm" style={{ background: "#00ff41", boxShadow: "0 0 8px #00ff41" }} />
-          <span className="text-lg font-black tracking-widest" style={{ fontFamily: "Oswald", color: "#00ff41" }}>GAMEWATCH ADMIN</span>
+          <span className="text-lg font-black tracking-widest" style={{ fontFamily: "Oswald", color: "#00ff41" }}>DivanMonitoring ADMIN</span>
         </div>
         <form onSubmit={submit} className="space-y-4">
           <Field label="ЛОГИН">
@@ -546,7 +546,7 @@ export default function Admin() {
           <div className="flex items-center gap-3">
             <div className="w-4 h-4 rounded-sm" style={{ background: "#00ff41", boxShadow: "0 0 8px #00ff41" }} />
             <span className="font-black tracking-widest" style={{ fontFamily: "Oswald", color: "#00ff41", fontSize: "1.1rem" }}>
-              GAMEWATCH
+              DivanMonitoring
             </span>
             <span className="font-mono-tech text-xs px-2 py-0.5 rounded-sm" style={{ color: "#ff6600", border: "1px solid #ff660044", background: "#ff660011" }}>
               ADMIN
