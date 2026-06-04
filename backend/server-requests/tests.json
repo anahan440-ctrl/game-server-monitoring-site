@@ -1,0 +1,11 @@
+{
+  "tests": [
+    {
+      "name": "POST submit request",
+      "method": "POST",
+      "path": "/",
+      "body": {"server_name": "Test Server", "ip": "1.2.3.4:2302", "contact": "vk.com/test", "game": "DayZ"},
+      "expectedStatus": 201
+    }
+  ]
+}

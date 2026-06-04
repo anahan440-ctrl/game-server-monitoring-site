@@ -3,6 +3,7 @@ const URLS = {
   news: "https://functions.poehali.dev/e38dc555-2544-4e76-a035-3c9e906ac0fb",
   data: "https://functions.poehali.dev/3a5cbb70-45ab-43c2-b300-634b51d7dedb",
   monitor: "https://functions.poehali.dev/62f422ed-1c81-442d-8c09-f6e6e0a9816d",
+  requests: "https://functions.poehali.dev/f1de4e51-9596-4ad2-bb49-c42040e9439a",
 };
 
 function getToken() {
@@ -111,6 +112,26 @@ export async function createUpdate(payload: object) {
 
 export async function deleteUpdate(id: number) {
   const r = await fetch(URLS.data, { method: "DELETE", headers: authHeaders(), body: JSON.stringify({ resource: "updates", id }) });
+  if (!r.ok) throw new Error("Ошибка удаления");
+  return r.json();
+}
+
+// SERVER REQUESTS
+export async function submitServerRequest(payload: { server_name: string; ip: string; contact: string; game: string }) {
+  const r = await fetch(URLS.requests, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || "Ошибка отправки");
+  return d;
+}
+
+export async function fetchServerRequests() {
+  const r = await fetch(URLS.requests, { headers: authHeaders() });
+  const d = await r.json();
+  return d.requests || [];
+}
+
+export async function deleteServerRequest(id: number) {
+  const r = await fetch(URLS.requests, { method: "DELETE", headers: authHeaders(), body: JSON.stringify({ id }) });
   if (!r.ok) throw new Error("Ошибка удаления");
   return r.json();
 }

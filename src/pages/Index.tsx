@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
-import { fetchNews, fetchUpdates, fetchLiveServers } from "@/lib/api";
+import { fetchNews, fetchUpdates, fetchLiveServers, submitServerRequest } from "@/lib/api";
 
 const DAYZ_IMG = "https://cdn.poehali.dev/projects/29041751-f323-4156-8c8d-555d4548c36a/files/a3857765-9781-4571-9024-bfa435c33d79.jpg";
 const ARMA_IMG = "https://cdn.poehali.dev/projects/29041751-f323-4156-8c8d-555d4548c36a/files/6a0e6152-b147-41b7-aeb8-ea0e94ab1acf.jpg";
@@ -576,38 +576,7 @@ export default function Index() {
               </div>
             </div>
 
-            <div className="rounded p-6" style={{ background: "#111", border: "1px solid #1e1e1e" }}>
-              <h3 className="text-lg font-bold mb-4 tracking-wider" style={{ fontFamily: "Oswald" }}>ДОБАВИТЬ СЕРВЕР</h3>
-              <div className="space-y-3">
-                {[
-                  { label: "НАЗВАНИЕ СЕРВЕРА", placeholder: "RU | My Server | PVP" },
-                  { label: "IP:ПОРТ", placeholder: "192.168.1.1:2302" },
-                  { label: "КОНТАКТ", placeholder: "Email или Telegram" },
-                ].map((f) => (
-                  <div key={f.label}>
-                    <label className="text-xs text-white/30 font-mono-tech tracking-wider">{f.label}</label>
-                    <input className="w-full mt-1 px-3 py-2 rounded-sm text-sm text-white placeholder-white/15 outline-none transition-colors"
-                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}
-                      onFocus={e => e.target.style.borderColor = "var(--neon-green)"}
-                      onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.1)"}
-                      placeholder={f.placeholder} />
-                  </div>
-                ))}
-                <div>
-                  <label className="text-xs text-white/30 font-mono-tech tracking-wider">ИГРА</label>
-                  <select className="w-full mt-1 px-3 py-2 rounded-sm text-sm text-white outline-none transition-colors"
-                    style={{ background: "#0e0e0e", border: "1px solid rgba(255,255,255,0.1)" }}>
-                    <option>DayZ</option>
-                    <option>Arma Reforger</option>
-                    <option>Conan Exiles</option>
-                  </select>
-                </div>
-                <button className="w-full py-3 mt-2 font-bold tracking-widest text-black rounded-sm transition-all hover:opacity-90"
-                  style={{ fontFamily: "Oswald", background: "var(--neon-green)", boxShadow: "0 0 20px rgba(0,255,65,0.25)" }}>
-                  ОТПРАВИТЬ ЗАЯВКУ
-                </button>
-              </div>
-            </div>
+            <AddServerForm />
           </div>
         </div>
       </section>
@@ -622,6 +591,92 @@ export default function Index() {
           <span className="font-mono-tech text-xs" style={{ color: "var(--neon-green)" }}>СИСТЕМА АКТИВНА</span>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function AddServerForm() {
+  const [form, setForm] = useState({ server_name: "", ip: "", contact: "", game: "DayZ" });
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+
+  const inputStyle = { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" };
+  const inputCls = "w-full mt-1 px-3 py-2 rounded-sm text-sm text-white placeholder-white/15 outline-none transition-colors";
+
+  async function handleSubmit() {
+    if (!form.server_name || !form.ip || !form.contact) { setError("Заполните все поля"); return; }
+    setSending(true);
+    setError("");
+    try {
+      await submitServerRequest(form);
+      setSent(true);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Ошибка отправки");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (sent) {
+    return (
+      <div className="rounded p-6 flex flex-col items-center justify-center gap-3 text-center" style={{ background: "#111", border: "1px solid rgba(0,255,65,0.3)" }}>
+        <Icon name="CheckCircle" size={36} style={{ color: "var(--neon-green)" }} />
+        <div className="font-bold text-lg tracking-wider" style={{ fontFamily: "Oswald", color: "var(--neon-green)" }}>ЗАЯВКА ОТПРАВЛЕНА</div>
+        <p className="text-sm text-white/40">Мы рассмотрим её и добавим сервер в мониторинг.</p>
+        <button onClick={() => { setSent(false); setForm({ server_name: "", ip: "", contact: "", game: "DayZ" }); }}
+          className="text-xs text-white/30 hover:text-white/60 transition-colors mt-2 font-mono-tech">
+          Отправить ещё одну
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded p-6" style={{ background: "#111", border: "1px solid #1e1e1e" }}>
+      <h3 className="text-lg font-bold mb-4 tracking-wider" style={{ fontFamily: "Oswald" }}>ДОБАВИТЬ СЕРВЕР</h3>
+      <div className="space-y-3">
+        <div>
+          <label className="text-xs text-white/30 font-mono-tech tracking-wider">НАЗВАНИЕ СЕРВЕРА</label>
+          <input value={form.server_name} onChange={e => setForm(f => ({ ...f, server_name: e.target.value }))}
+            className={inputCls} style={inputStyle}
+            onFocus={e => e.currentTarget.style.borderColor = "var(--neon-green)"}
+            onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"}
+            placeholder="RU | My Server | PVP" />
+        </div>
+        <div>
+          <label className="text-xs text-white/30 font-mono-tech tracking-wider">IP:ПОРТ</label>
+          <input value={form.ip} onChange={e => setForm(f => ({ ...f, ip: e.target.value }))}
+            className={inputCls} style={inputStyle}
+            onFocus={e => e.currentTarget.style.borderColor = "var(--neon-green)"}
+            onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"}
+            placeholder="192.168.1.1:2302" />
+        </div>
+        <div>
+          <label className="text-xs text-white/30 font-mono-tech tracking-wider">КОНТАКТ (VK, Telegram и т.д.)</label>
+          <input value={form.contact} onChange={e => setForm(f => ({ ...f, contact: e.target.value }))}
+            className={inputCls} style={inputStyle}
+            onFocus={e => e.currentTarget.style.borderColor = "var(--neon-green)"}
+            onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"}
+            placeholder="vk.com/mypage или @username" />
+        </div>
+        <div>
+          <label className="text-xs text-white/30 font-mono-tech tracking-wider">ИГРА</label>
+          <select value={form.game} onChange={e => setForm(f => ({ ...f, game: e.target.value }))}
+            className="w-full mt-1 px-3 py-2 rounded-sm text-sm text-white outline-none transition-colors"
+            style={{ background: "#0e0e0e", border: "1px solid rgba(255,255,255,0.1)" }}>
+            <option>DayZ</option>
+            <option>Arma Reforger</option>
+            <option>Conan Exiles</option>
+          </select>
+        </div>
+        {error && <p className="text-xs font-mono-tech" style={{ color: "#ff3030" }}>{error}</p>}
+        <button onClick={handleSubmit} disabled={sending}
+          className="w-full py-3 mt-2 font-bold tracking-widest text-black rounded-sm transition-all hover:opacity-90 disabled:opacity-50"
+          style={{ fontFamily: "Oswald", background: "var(--neon-green)", boxShadow: "0 0 20px rgba(0,255,65,0.25)" }}>
+          {sending ? "ОТПРАВКА..." : "ОТПРАВИТЬ ЗАЯВКУ"}
+        </button>
+      </div>
     </div>
   );
 }

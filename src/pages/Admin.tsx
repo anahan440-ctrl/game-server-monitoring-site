@@ -5,6 +5,7 @@ import {
   fetchNews, createNews, deleteNews, updateNews,
   fetchServers, createServer, deleteServer, updateServer,
   fetchUpdates, createUpdate, deleteUpdate,
+  fetchServerRequests, deleteServerRequest,
 } from "@/lib/api";
 
 interface NewsItem {
@@ -518,10 +519,66 @@ function UpdatesSection({ toast }: { toast: (m: string, t: "ok" | "err") => void
   );
 }
 
+// ──────── Секция заявок ────────
+function RequestsSection({ toast }: { toast: (m: string, t: "ok" | "err") => void }) {
+  const [items, setItems] = useState<{ id: number; server_name: string; ip: string; contact: string; game: string; status: string; created_at: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setItems(await fetchServerRequests());
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function remove(id: number) {
+    if (!confirm("Удалить заявку?")) return;
+    await deleteServerRequest(id);
+    toast("Заявка удалена", "ok");
+    await load();
+  }
+
+  const gameColor = (g: string) => GAMES.find(x => x.label === g)?.color || "#fff";
+
+  return (
+    <div className="rounded" style={{ background: "#111", border: "1px solid #1e1e1e" }}>
+      <div className="px-4 py-3" style={{ borderBottom: "1px solid #1e1e1e" }}>
+        <span className="text-sm font-bold tracking-wider text-white/50" style={{ fontFamily: "Oswald" }}>ЗАЯВКИ НА ДОБАВЛЕНИЕ ({items.length})</span>
+      </div>
+      {loading ? (
+        <div className="px-4 py-8 text-center text-white/30 font-mono-tech text-sm">Загрузка...</div>
+      ) : items.length === 0 ? (
+        <div className="px-4 py-8 text-center text-white/30 font-mono-tech text-sm">Нет заявок</div>
+      ) : (
+        <div className="divide-y" style={{ borderColor: "#1e1e1e" }}>
+          {items.map(r => (
+            <div key={r.id} className="flex items-start gap-3 px-4 py-3 hover:bg-white/3 transition-all">
+              <span className="font-mono-tech text-xs px-1.5 py-0.5 rounded-sm shrink-0 mt-0.5"
+                style={{ color: gameColor(r.game), border: `1px solid ${gameColor(r.game)}44`, background: `${gameColor(r.game)}11` }}>
+                {r.game.toUpperCase()}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-white">{r.server_name}</div>
+                <div className="text-xs text-white/40 font-mono-tech mt-0.5">{r.ip}</div>
+                <div className="text-xs text-white/40 mt-0.5">Контакт: <span style={{ color: "#00bfff" }}>{r.contact}</span></div>
+                <div className="text-xs text-white/20 font-mono-tech mt-0.5">{r.created_at}</div>
+              </div>
+              <button onClick={() => remove(r.id)} className="p-1.5 rounded hover:bg-white/10 transition-all shrink-0" style={{ color: "#ff3030" }}>
+                <Icon name="Trash2" size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ──────── Главный компонент ────────
 export default function Admin() {
   const [loggedIn, setLoggedIn] = useState(isLoggedIn());
-  const [tab, setTab] = useState<"news" | "servers" | "updates">("news");
+  const [tab, setTab] = useState<"news" | "servers" | "updates" | "requests">("news");
   const [toastMsg, setToastMsg] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
 
   const showToast = useCallback((msg: string, type: "ok" | "err") => setToastMsg({ msg, type }), []);
@@ -534,6 +591,7 @@ export default function Admin() {
     { id: "news", label: "НОВОСТИ", icon: "Newspaper" },
     { id: "servers", label: "СЕРВЕРЫ", icon: "Server" },
     { id: "updates", label: "ОБНОВЛЕНИЯ", icon: "RefreshCw" },
+    { id: "requests", label: "ЗАЯВКИ", icon: "Inbox" },
   ] as const;
 
   return (
@@ -587,6 +645,7 @@ export default function Admin() {
         {tab === "news" && <NewsSection toast={showToast} />}
         {tab === "servers" && <ServersSection toast={showToast} />}
         {tab === "updates" && <UpdatesSection toast={showToast} />}
+        {tab === "requests" && <RequestsSection toast={showToast} />}
       </div>
     </div>
   );
