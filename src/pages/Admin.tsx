@@ -15,7 +15,7 @@ interface NewsItem {
 interface ServerItem {
   id: number; game: string; name: string; map: string;
   ip: string; max_players: number; is_active: boolean;
-  battlemetrics_id?: string;
+  wargm_id?: string;
 }
 
 interface UpdateItem {
@@ -265,7 +265,7 @@ function NewsSection({ toast }: { toast: (m: string, t: "ok" | "err") => void })
 function ServersSection({ toast }: { toast: (m: string, t: "ok" | "err") => void }) {
   const [items, setItems] = useState<ServerItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ game: "", name: "", map: "", ip: "", max_players: "60", battlemetrics_id: "" });
+  const [form, setForm] = useState({ game: "", name: "", map: "", ip: "", max_players: "60", wargm_id: "" });
   const [editItem, setEditItem] = useState<ServerItem | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -288,7 +288,7 @@ function ServersSection({ toast }: { toast: (m: string, t: "ok" | "err") => void
         await createServer({ ...form, max_players: Number(form.max_players) });
         toast("Сервер добавлен", "ok");
       }
-      setForm({ game: "", name: "", map: "", ip: "", max_players: "60", battlemetrics_id: "" });
+      setForm({ game: "", name: "", map: "", ip: "", max_players: "60", wargm_id: "" });
       setEditItem(null);
       await load();
     } catch (e: unknown) {
@@ -305,7 +305,7 @@ function ServersSection({ toast }: { toast: (m: string, t: "ok" | "err") => void
 
   function startEdit(item: ServerItem) {
     setEditItem(item);
-    setForm({ game: item.game, name: item.name, map: item.map, ip: item.ip || "", max_players: String(item.max_players), battlemetrics_id: item.battlemetrics_id || "" });
+    setForm({ game: item.game, name: item.name, map: item.map, ip: item.ip || "", max_players: String(item.max_players), wargm_id: item.wargm_id || "" });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -338,17 +338,17 @@ function ServersSection({ toast }: { toast: (m: string, t: "ok" | "err") => void
               className={inputCls} style={inputStyle} placeholder="1.2.3.4:2302" />
           </Field>
           <div className="md:col-span-2">
-            <Field label="BATTLEMETRICS ID (для live-мониторинга)">
+            <Field label="WARGM ID (для live-мониторинга)">
               <div className="flex gap-2 items-start">
-                <input value={form.battlemetrics_id} onChange={e => setForm(f => ({ ...f, battlemetrics_id: e.target.value }))}
-                  className={inputCls} style={inputStyle} placeholder="например: 12345678" />
-                <a href="https://www.battlemetrics.com/servers/dayz" target="_blank" rel="noreferrer"
+                <input value={form.wargm_id} onChange={e => setForm(f => ({ ...f, wargm_id: e.target.value }))}
+                  className={inputCls} style={inputStyle} placeholder="например: 81234" />
+                <a href="https://wargm.ru" target="_blank" rel="noreferrer"
                   className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-sm text-xs font-bold transition-all hover:opacity-80"
                   style={{ fontFamily: "Oswald", color: "#00bfff", border: "1px solid #00bfff44", background: "#00bfff11", whiteSpace: "nowrap" }}>
                   Найти ID →
                 </a>
               </div>
-              <p className="text-xs text-white/25 mt-1">Откройте страницу сервера на battlemetrics.com — ID в URL: /servers/dayz/<b style={{color:"#00bfff"}}>12345678</b></p>
+              <p className="text-xs text-white/25 mt-1">Откройте страницу сервера на wargm.ru — ID в URL: /server/<b style={{color:"#00bfff"}}>81234</b></p>
             </Field>
           </div>
         </div>
@@ -359,7 +359,7 @@ function ServersSection({ toast }: { toast: (m: string, t: "ok" | "err") => void
             {saving ? "СОХРАНЕНИЕ..." : editItem ? "СОХРАНИТЬ" : "ДОБАВИТЬ"}
           </button>
           {editItem && (
-            <button onClick={() => { setEditItem(null); setForm({ game: "", name: "", map: "", ip: "", max_players: "60", battlemetrics_id: "" }); }}
+            <button onClick={() => { setEditItem(null); setForm({ game: "", name: "", map: "", ip: "", max_players: "60", wargm_id: "" }); }}
               className="px-6 py-2 font-bold tracking-widest rounded-sm text-sm transition-all hover:bg-white/10"
               style={{ fontFamily: "Oswald", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.15)" }}>
               ОТМЕНА
@@ -387,7 +387,7 @@ function ServersSection({ toast }: { toast: (m: string, t: "ok" | "err") => void
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-white">{s.name}</span>
-                    {s.battlemetrics_id ? (
+                    {s.wargm_id ? (
                       <span className="font-mono-tech text-xs px-1.5 py-0.5 rounded-sm"
                         style={{ color: "#00ff41", background: "rgba(0,255,65,0.08)", border: "1px solid rgba(0,255,65,0.25)" }}>
                         LIVE
@@ -398,7 +398,7 @@ function ServersSection({ toast }: { toast: (m: string, t: "ok" | "err") => void
                   </div>
                   <div className="text-xs text-white/35 font-mono-tech">
                     {s.map} · {s.ip || "—"} · max {s.max_players}
-                    {s.battlemetrics_id && <span style={{ color: "#00bfff" }}> · BM:{s.battlemetrics_id}</span>}
+                    {s.wargm_id && <span style={{ color: "#00bfff" }}> · wargm:{s.wargm_id}</span>}
                   </div>
                 </div>
                 <div className="flex gap-1 shrink-0">

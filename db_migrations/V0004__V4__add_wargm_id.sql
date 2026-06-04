@@ -1,0 +1,1 @@
+ALTER TABLE t_p88133969_game_server_monitori.servers ADD COLUMN IF NOT EXISTS wargm_id varchar(20) NULL;

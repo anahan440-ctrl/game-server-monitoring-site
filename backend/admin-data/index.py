@@ -59,19 +59,19 @@ def handler(event: dict, context) -> dict:
             game = params.get("game")
             if game:
                 cur.execute(
-                    f"SELECT id, game, name, map, ip, max_players, is_active, battlemetrics_id FROM {schema}.servers WHERE game=%s AND is_active=TRUE ORDER BY id",
+                    f"SELECT id, game, name, map, ip, max_players, is_active, wargm_id FROM {schema}.servers WHERE game=%s AND is_active=TRUE ORDER BY id",
                     (game,)
                 )
             else:
                 cur.execute(
-                    f"SELECT id, game, name, map, ip, max_players, is_active, battlemetrics_id FROM {schema}.servers WHERE is_active=TRUE ORDER BY id"
+                    f"SELECT id, game, name, map, ip, max_players, is_active, wargm_id FROM {schema}.servers WHERE is_active=TRUE ORDER BY id"
                 )
             rows = cur.fetchall()
             conn.close()
             data = [
                 {"id": r[0], "game": r[1], "name": r[2], "map": r[3],
                  "ip": r[4], "max_players": r[5], "is_active": r[6],
-                 "battlemetrics_id": r[7] or ""}
+                 "wargm_id": r[7] or ""}
                 for r in rows
             ]
             return {"statusCode": 200, "headers": CORS, "body": json.dumps({"servers": data})}
@@ -87,10 +87,10 @@ def handler(event: dict, context) -> dict:
         if method == "POST":
             conn = get_conn()
             cur = conn.cursor()
-            bm_id = body.get("battlemetrics_id", "").strip() or None
+            wargm_id = body.get("wargm_id", "").strip() or None
             cur.execute(
-                f"INSERT INTO {schema}.servers (game, name, map, ip, max_players, battlemetrics_id) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id",
-                (body["game"], body["name"], body["map"], body.get("ip",""), int(body.get("max_players", 60)), bm_id)
+                f"INSERT INTO {schema}.servers (game, name, map, ip, max_players, wargm_id) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id",
+                (body["game"], body["name"], body["map"], body.get("ip",""), int(body.get("max_players", 60)), wargm_id)
             )
             new_id = cur.fetchone()[0]
             conn.commit()
@@ -100,10 +100,10 @@ def handler(event: dict, context) -> dict:
         if method == "PUT":
             conn = get_conn()
             cur = conn.cursor()
-            bm_id = body.get("battlemetrics_id", "").strip() or None
+            wargm_id = body.get("wargm_id", "").strip() or None
             cur.execute(
-                f"UPDATE {schema}.servers SET game=%s,name=%s,map=%s,ip=%s,max_players=%s,is_active=%s,battlemetrics_id=%s WHERE id=%s",
-                (body["game"], body["name"], body["map"], body.get("ip",""), int(body.get("max_players",60)), bool(body.get("is_active",True)), bm_id, body["id"])
+                f"UPDATE {schema}.servers SET game=%s,name=%s,map=%s,ip=%s,max_players=%s,is_active=%s,wargm_id=%s WHERE id=%s",
+                (body["game"], body["name"], body["map"], body.get("ip",""), int(body.get("max_players",60)), bool(body.get("is_active",True)), wargm_id, body["id"])
             )
             conn.commit()
             conn.close()
