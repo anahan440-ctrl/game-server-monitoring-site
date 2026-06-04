@@ -561,18 +561,17 @@ export default function Index() {
               </p>
               <div className="space-y-3">
                 {[
-                  { icon: "Mail", label: "Email", value: "admin@gamewatch.ru", color: "#00ff41" },
-                  { icon: "MessageCircle", label: "Telegram", value: "@gamewatch_ru", color: "#00bfff" },
-                  { icon: "Globe", label: "Discord", value: "discord.gg/gamewatch", color: "#ff6600" },
+                  { icon: "Users", label: "ВКонтакте", value: "vk.com/divanmonitoring", href: "https://vk.com/divanmonitoring", color: "#00bfff" },
                 ].map((c) => (
-                  <div key={c.label} className="flex items-center gap-4 rounded px-4 py-3 transition-all hover:bg-white/5"
+                  <a key={c.label} href={c.href} target="_blank" rel="noreferrer"
+                    className="flex items-center gap-4 rounded px-4 py-3 transition-all hover:bg-white/5"
                     style={{ background: "#111", border: `1px solid ${c.color}22` }}>
                     <Icon name={c.icon} size={18} style={{ color: c.color }} />
                     <div>
                       <div className="text-xs text-white/25 font-mono-tech">{c.label}</div>
                       <div className="text-sm font-semibold" style={{ color: c.color }}>{c.value}</div>
                     </div>
-                  </div>
+                  </a>
                 ))}
               </div>
             </div>
