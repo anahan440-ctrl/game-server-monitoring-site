@@ -1,0 +1,16 @@
+{
+  "tests": [
+    {
+      "name": "GET servers",
+      "method": "GET",
+      "path": "/?resource=servers",
+      "expectedStatus": 200
+    },
+    {
+      "name": "GET updates",
+      "method": "GET",
+      "path": "/?resource=updates",
+      "expectedStatus": 200
+    }
+  ]
+}

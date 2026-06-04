@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
+import { fetchNews, fetchServers, fetchUpdates } from "@/lib/api";
 
 const DAYZ_IMG = "https://cdn.poehali.dev/projects/29041751-f323-4156-8c8d-555d4548c36a/files/a3857765-9781-4571-9024-bfa435c33d79.jpg";
 const ARMA_IMG = "https://cdn.poehali.dev/projects/29041751-f323-4156-8c8d-555d4548c36a/files/6a0e6152-b147-41b7-aeb8-ea0e94ab1acf.jpg";
@@ -11,49 +12,21 @@ const GAMES = [
   { id: "conan", name: "Conan Exiles", color: "#ff6600", img: CONAN_IMG, tag: "FANTASY" },
 ];
 
-const SERVERS_DATA = {
-  dayz: [
-    { name: "RU | VANILLA | PVP", map: "Chernarus", players: 48, max: 60, ping: 12, uptime: 99.8, activity: 95, rank: 1 },
-    { name: "RU | MODDED | TRADER", map: "Livonia", players: 55, max: 60, ping: 18, uptime: 98.2, activity: 92, rank: 2 },
-    { name: "RU | RP | HARDCORE", map: "Chernarus", players: 38, max: 50, ping: 22, uptime: 97.5, activity: 76, rank: 3 },
-    { name: "EU | DayZ | PLUS", map: "Deer Isle", players: 22, max: 40, ping: 45, uptime: 95.1, activity: 55, rank: 4 },
-    { name: "RU | VANILLA | HELI", map: "Sakhal", players: 31, max: 60, ping: 28, uptime: 94.0, activity: 52, rank: 5 },
-  ],
-  arma: [
-    { name: "RU | REFORGER | PVP", map: "Everon", players: 62, max: 64, ping: 9, uptime: 99.9, activity: 97, rank: 1 },
-    { name: "RU | CONQUEST | 64", map: "Everon", players: 58, max: 64, ping: 14, uptime: 99.1, activity: 91, rank: 2 },
-    { name: "EU | MILSIM | REALISM", map: "Everon", players: 44, max: 64, ping: 52, uptime: 98.4, activity: 69, rank: 3 },
-    { name: "RU | FREE | FFA", map: "Everon", players: 28, max: 64, ping: 31, uptime: 96.2, activity: 44, rank: 4 },
-  ],
-  conan: [
-    { name: "RU | PVP | X5", map: "Exiled Lands", players: 40, max: 50, ping: 15, uptime: 99.5, activity: 80, rank: 1 },
-    { name: "RU | SIPTAH | RP", map: "Isle of Siptah", players: 33, max: 50, ping: 19, uptime: 98.7, activity: 66, rank: 2 },
-    { name: "RU | MODDED | MODS", map: "Exiled Lands", players: 27, max: 40, ping: 24, uptime: 97.2, activity: 68, rank: 3 },
-    { name: "EU | HARDCORE | PVE", map: "Exiled Lands", players: 18, max: 40, ping: 58, uptime: 95.8, activity: 45, rank: 4 },
-  ],
-};
+// Типы данных из БД
+interface DbServer { id: number; game: string; name: string; map: string; ip: string; max_players: number; is_active: boolean; }
+interface DbNews { id: number; game: string; title: string; text: string; category: string; is_hot: boolean; date: string; }
+interface DbUpdate { id: number; game: string; version: string; items: string[]; date: string; }
 
-const NEWS = [
-  { id: 1, game: "dayz", gameColor: "#00ff41", title: "Патч 1.25: Новая карта Sakhal и исправления", date: "02.06.2026", text: "Bohemia Interactive выпустила масштабное обновление с новой зимней картой Sakhal, переработанной системой погоды и более 200 исправлениями.", category: "ОБНОВЛЕНИЕ", hot: true },
-  { id: 2, game: "arma", gameColor: "#00bfff", title: "Arma Reforger: Экспериментальная ветка открыта", date: "01.06.2026", text: "Новые транспортные средства, улучшенная физика движения и система повреждений — всё это доступно на экспериментальных серверах уже сейчас.", category: "НОВОСТЬ", hot: true },
-  { id: 3, game: "conan", gameColor: "#ff6600", title: "Age of War: Глава 4 — детали обновления", date: "30.05.2026", text: "Funcom раскрыла подробности о следующей главе Age of War с новыми боссами, механиками кланов и переработкой системы крафта.", category: "АНОНС", hot: false },
-  { id: 4, game: "dayz", gameColor: "#00ff41", title: "Новый ивент: Зомби-нашествие на Черная Гора", date: "29.05.2026", text: "Временный ивент с повышенным спавном заражённых и уникальными наградами для выживших. Активен до 10 июня.", category: "ИВЕНТ", hot: false },
-  { id: 5, game: "arma", gameColor: "#00bfff", title: "Workshop: +500 новых модификаций за месяц", date: "28.05.2026", text: "Сообщество продолжает активно создавать контент. Популярные категории: новые карты, оружие и миссии для Arma Reforger.", category: "СООБЩЕСТВО", hot: false },
-  { id: 6, game: "conan", gameColor: "#ff6600", title: "Серверный патч 3.9.4 — оптимизация производительности", date: "27.05.2026", text: "Значительное улучшение производительности серверов, особенно на картах с большим количеством построек и игроков.", category: "ПАТЧ", hot: false },
-];
+// Статические данные для имитации пинга/онлайна (т.к. реального мониторинга нет)
+function mockServerStats(id: number, max: number) {
+  const seed = id * 17;
+  const players = Math.min(max, Math.floor((seed % 40) + max * 0.3));
+  const ping = (seed % 50) + 8;
+  const uptime = 94 + (seed % 6);
+  const activity = Math.round((players / max) * 100);
+  return { players, ping, uptime, activity };
+}
 
-const UPDATES = [
-  { game: "DayZ", version: "1.25.0", date: "02.06.2026", color: "#00ff41", items: ["Новая карта Sakhal", "Переработка системы погоды", "Новое оружие: VSD, B95", "Оптимизация серверов +30%", "200+ исправлений багов"] },
-  { game: "Arma Reforger", version: "1.2.1", date: "01.06.2026", color: "#00bfff", items: ["Экспериментальная ветка", "4 новых транспорта", "Улучшена физика ИИ", "Система VAC расширена", "Патч балансировки оружия"] },
-  { game: "Conan Exiles", version: "3.9.4", date: "30.05.2026", color: "#ff6600", items: ["Age of War Глава 4 тизер", "Оптимизация серверов", "Новые боссы: 3 шт", "Фикс крафта и инвентаря", "Переработка PvP рейтинга"] },
-];
-
-const GLOBAL_STATS = [
-  { label: "Серверов онлайн", value: "1 247", icon: "Server", color: "#00ff41" },
-  { label: "Игроков сейчас", value: "48 392", icon: "Users", color: "#00bfff" },
-  { label: "Пиковый онлайн", value: "127 891", icon: "TrendingUp", color: "#ff6600" },
-  { label: "Игр мониторится", value: "3", icon: "Gamepad2", color: "#ff3030" },
-];
 
 const NAV_ITEMS = [
   { id: "home", label: "ГЛАВНАЯ" },
@@ -75,6 +48,11 @@ function OnlineDot({ color = "#00ff41" }: { color?: string }) {
 
 interface ServerData {
   name: string; map: string; players: number; max: number; ping: number; uptime: number; activity: number; rank: number;
+}
+
+function gameColor(gameId: string) {
+  const map: Record<string, string> = { dayz: "#00ff41", arma: "#00bfff", conan: "#ff6600" };
+  return map[gameId] || "#fff";
 }
 
 function PlayerBar({ value, max, color }: { value: number; max: number; color: string }) {
@@ -132,9 +110,18 @@ export default function Index() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  // Данные из БД
+  const [dbNews, setDbNews] = useState<DbNews[]>([]);
+  const [dbServers, setDbServers] = useState<DbServer[]>([]);
+  const [dbUpdates, setDbUpdates] = useState<DbUpdate[]>([]);
+
   useEffect(() => {
     setMounted(true);
     const t = setInterval(() => setTime(new Date()), 1000);
+    // Загружаем данные из БД
+    fetchNews().then(setDbNews).catch(() => {});
+    fetchServers().then(setDbServers).catch(() => {});
+    fetchUpdates().then(setDbUpdates).catch(() => {});
     return () => clearInterval(t);
   }, []);
 
@@ -145,9 +132,36 @@ export default function Index() {
     if (el) el.scrollIntoView({ behavior: "smooth" });
   };
 
-  const filteredNews = filterGame === "all" ? NEWS : NEWS.filter((n) => n.game === filterGame);
+  // Новости с цветом игры
+  const newsWithColor = dbNews.map(n => ({ ...n, gameColor: gameColor(n.game), hot: n.is_hot }));
+  const filteredNews = filterGame === "all" ? newsWithColor : newsWithColor.filter((n) => n.game === filterGame);
+
+  // Серверы текущей игры с моковыми данными онлайна
   const currentGame = GAMES.find((g) => g.id === selectedGame)!;
-  const servers = SERVERS_DATA[selectedGame];
+  const servers: ServerData[] = dbServers
+    .filter(s => s.game === selectedGame)
+    .map((s, i) => {
+      const stats = mockServerStats(s.id, s.max_players);
+      return { name: s.name, map: s.map, players: stats.players, max: s.max_players, ping: stats.ping, uptime: stats.uptime, activity: stats.activity, rank: i + 1 };
+    });
+
+  // Обновления — группируем по игре, берём последнее
+  const updatesGrouped = GAMES.map(g => {
+    const gUpdates = dbUpdates.filter(u => u.game === g.id);
+    if (!gUpdates.length) return null;
+    const latest = gUpdates[0];
+    return { game: g.name, version: latest.version, date: latest.date, color: g.color, items: latest.items };
+  }).filter(Boolean) as { game: string; version: string; date: string; color: string; items: string[] }[];
+
+  // Статистика
+  const totalServers = dbServers.length;
+  const totalPlayers = dbServers.reduce((acc, s) => acc + mockServerStats(s.id, s.max_players).players, 0);
+  const GLOBAL_STATS = [
+    { label: "Серверов онлайн", value: totalServers ? totalServers.toString() : "—", icon: "Server", color: "#00ff41" },
+    { label: "Игроков сейчас", value: totalPlayers ? totalPlayers.toLocaleString("ru-RU") : "—", icon: "Users", color: "#00bfff" },
+    { label: "Пиковый онлайн", value: "127 891", icon: "TrendingUp", color: "#ff6600" },
+    { label: "Игр мониторится", value: "3", icon: "Gamepad2", color: "#ff3030" },
+  ];
 
   return (
     <div className="min-h-screen text-white" style={{ background: "#0a0a0a", fontFamily: "Rajdhani, sans-serif" }}>
@@ -179,7 +193,12 @@ export default function Index() {
             ))}
           </div>
 
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-3">
+            <a href="/admin"
+              className="font-mono-tech text-xs px-2 py-1 rounded-sm transition-all hover:opacity-80"
+              style={{ color: "#ff6600", border: "1px solid #ff660033", background: "#ff660011" }}>
+              ADMIN
+            </a>
             <OnlineDot />
             <span className="font-mono-tech text-xs" style={{ color: "var(--neon-green)" }}>
               {time.toLocaleTimeString("ru-RU")}
@@ -235,7 +254,7 @@ export default function Index() {
 
             {/* Quick stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
-              {GLOBAL_STATS.map((s) => (
+              {GLOBAL_STATS.map((s: { label: string; value: string; icon: string; color: string }) => (
                 <div key={s.label} className="rounded-sm p-4" style={{ background: "#111", borderLeft: `2px solid ${s.color}`, boxShadow: `inset 0 0 20px ${s.color}06` }}>
                   <div className="flex items-center gap-2 mb-1">
                     <Icon name={s.icon} size={13} style={{ color: s.color }} />
@@ -272,7 +291,7 @@ export default function Index() {
                       <div className="flex items-center gap-1.5">
                         <OnlineDot color={g.color} />
                         <span className="font-mono-tech text-xs" style={{ color: g.color }}>
-                          {SERVERS_DATA[g.id as keyof typeof SERVERS_DATA].reduce((a, s) => a + s.players, 0)} online
+                          {dbServers.filter(s => s.game === g.id).reduce((a, s) => a + mockServerStats(s.id, s.max_players).players, 0)} online
                         </span>
                       </div>
                     </div>
@@ -392,7 +411,7 @@ export default function Index() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            {UPDATES.map((u) => (
+            {updatesGrouped.map((u) => (
               <div key={u.game} className="rounded p-5" style={{ background: "#111", borderTop: `2px solid ${u.color}`, boxShadow: `0 -4px 20px ${u.color}10` }}>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold text-white" style={{ fontFamily: "Oswald", fontSize: "1.1rem" }}>{u.game}</h3>
@@ -431,7 +450,7 @@ export default function Index() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-            {GLOBAL_STATS.map((s) => (
+            {GLOBAL_STATS.map((s: { label: string; value: string; icon: string; color: string }) => (
               <div key={s.label} className="rounded p-5 text-center" style={{ background: "#111", border: `1px solid ${s.color}22` }}>
                 <Icon name={s.icon} size={26} className="mx-auto mb-3" style={{ color: s.color }} />
                 <div className="text-3xl font-black mb-1" style={{ fontFamily: "Oswald", color: s.color, textShadow: `0 0 15px ${s.color}55` }}>{s.value}</div>
@@ -443,11 +462,12 @@ export default function Index() {
           <h3 className="text-xl font-bold tracking-wider mb-4 text-white/60" style={{ fontFamily: "Oswald" }}>РЕЙТИНГ ПО АКТИВНОСТИ</h3>
           <div className="grid md:grid-cols-3 gap-6">
             {GAMES.map((g) => {
-              const gameServers = SERVERS_DATA[g.id as keyof typeof SERVERS_DATA];
-              const totalPlayers = gameServers.reduce((a, s) => a + s.players, 0);
-              const totalMax = gameServers.reduce((a, s) => a + s.max, 0);
-              const avgActivity = Math.round(gameServers.reduce((a, s) => a + s.activity, 0) / gameServers.length);
-              const pct = Math.round((totalPlayers / totalMax) * 100);
+              const gameServers = dbServers.filter(s => s.game === g.id);
+              const serverStats = gameServers.map(s => mockServerStats(s.id, s.max_players));
+              const totalPlayers = serverStats.reduce((a, s) => a + s.players, 0);
+              const totalMax = gameServers.reduce((a, s) => a + s.max_players, 0);
+              const avgActivity = serverStats.length ? Math.round(serverStats.reduce((a, s) => a + s.activity, 0) / serverStats.length) : 0;
+              const pct = totalMax ? Math.round((totalPlayers / totalMax) * 100) : 0;
 
               return (
                 <div key={g.id} className="rounded p-5" style={{ background: "#111", border: `1px solid ${g.color}22` }}>
