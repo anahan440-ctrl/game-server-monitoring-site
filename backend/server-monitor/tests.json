@@ -1,0 +1,16 @@
+{
+  "tests": [
+    {
+      "name": "GET all servers live",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "GET dayz servers",
+      "method": "GET",
+      "path": "/?game=dayz",
+      "expectedStatus": 200
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
-import { fetchNews, fetchServers, fetchUpdates } from "@/lib/api";
+import { fetchNews, fetchUpdates, fetchLiveServers } from "@/lib/api";
 
 const DAYZ_IMG = "https://cdn.poehali.dev/projects/29041751-f323-4156-8c8d-555d4548c36a/files/a3857765-9781-4571-9024-bfa435c33d79.jpg";
 const ARMA_IMG = "https://cdn.poehali.dev/projects/29041751-f323-4156-8c8d-555d4548c36a/files/6a0e6152-b147-41b7-aeb8-ea0e94ab1acf.jpg";
@@ -12,20 +12,14 @@ const GAMES = [
   { id: "conan", name: "Conan Exiles", color: "#ff6600", img: CONAN_IMG, tag: "FANTASY" },
 ];
 
-// Типы данных из БД
-interface DbServer { id: number; game: string; name: string; map: string; ip: string; max_players: number; is_active: boolean; }
+// Типы данных
+interface LiveServer {
+  id: number; game: string; name: string; map: string; ip: string;
+  max_players: number; online: number; status: string; activity: number;
+  has_live: boolean; source: string;
+}
 interface DbNews { id: number; game: string; title: string; text: string; category: string; is_hot: boolean; date: string; }
 interface DbUpdate { id: number; game: string; version: string; items: string[]; date: string; }
-
-// Статические данные для имитации пинга/онлайна (т.к. реального мониторинга нет)
-function mockServerStats(id: number, max: number) {
-  const seed = id * 17;
-  const players = Math.min(max, Math.floor((seed % 40) + max * 0.3));
-  const ping = (seed % 50) + 8;
-  const uptime = 94 + (seed % 6);
-  const activity = Math.round((players / max) * 100);
-  return { players, ping, uptime, activity };
-}
 
 
 const NAV_ITEMS = [
@@ -46,57 +40,63 @@ function OnlineDot({ color = "#00ff41" }: { color?: string }) {
   );
 }
 
-interface ServerData {
-  name: string; map: string; players: number; max: number; ping: number; uptime: number; activity: number; rank: number;
-}
-
 function gameColor(gameId: string) {
   const map: Record<string, string> = { dayz: "#00ff41", arma: "#00bfff", conan: "#ff6600" };
   return map[gameId] || "#fff";
 }
 
 function PlayerBar({ value, max, color }: { value: number; max: number; color: string }) {
-  const pct = Math.round((value / max) * 100);
+  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-        <div
-          className="h-full rounded-full"
-          style={{ width: `${pct}%`, backgroundColor: color, boxShadow: `0 0 6px ${color}` }}
-        />
+        <div className="h-full rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, backgroundColor: color, boxShadow: `0 0 6px ${color}` }} />
       </div>
       <span className="font-mono-tech text-xs text-white/50" style={{ minWidth: 44 }}>{value}/{max}</span>
     </div>
   );
 }
 
-function ServerRow({ s, gameColor }: { s: ServerData; gameColor: string }) {
+function ServerRow({ s, color, rank }: { s: LiveServer; color: string; rank: number }) {
   const rankColors: Record<number, string> = { 1: "#ffd700", 2: "#c0c0c0", 3: "#cd7f32" };
+  const isOffline = s.status === "offline" || s.status === "unknown";
+  const dotColor = isOffline ? "#ff3030" : color;
   return (
-    <div className="rounded px-4 py-3 transition-all hover:bg-white/5" style={{ background: "#111", border: "1px solid #1e1e1e" }}>
+    <div className="rounded px-4 py-3 transition-all hover:bg-white/5" style={{ background: "#111", border: `1px solid ${isOffline ? "#ff303022" : "#1e1e1e"}` }}>
       <div className="flex items-center gap-3 mb-2">
-        <span className="font-mono-tech text-xs font-bold px-1.5 py-0.5 rounded" style={{ color: rankColors[s.rank] || "#555", border: `1px solid ${rankColors[s.rank] || "#333"}` }}>
-          #{s.rank}
+        <span className="font-mono-tech text-xs font-bold px-1.5 py-0.5 rounded"
+          style={{ color: rankColors[rank] || "#555", border: `1px solid ${rankColors[rank] || "#333"}` }}>
+          #{rank}
         </span>
-        <OnlineDot color={gameColor} />
+        <OnlineDot color={dotColor} />
         <span className="font-semibold text-white text-sm flex-1 truncate">{s.name}</span>
-        <span className="font-mono-tech text-xs shrink-0" style={{ color: s.ping < 30 ? "#00ff41" : s.ping < 60 ? "#ffaa00" : "#ff3030" }}>
-          {s.ping}ms
-        </span>
-        <span className="text-xs text-white/30 font-mono-tech shrink-0">{s.uptime}%</span>
+        {s.has_live ? (
+          <span className="font-mono-tech text-xs px-1.5 py-0.5 rounded-sm shrink-0"
+            style={{ color: "#00ff41", background: "rgba(0,255,65,0.08)", border: "1px solid rgba(0,255,65,0.25)" }}>
+            LIVE
+          </span>
+        ) : (
+          <span className="font-mono-tech text-xs text-white/20 shrink-0">—</span>
+        )}
+        {isOffline
+          ? <span className="font-mono-tech text-xs shrink-0" style={{ color: "#ff3030" }}>OFFLINE</span>
+          : <span className="font-mono-tech text-xs shrink-0" style={{ color: "#00ff41" }}>{s.online > 0 ? "ONLINE" : "EMPTY"}</span>
+        }
       </div>
       <div className="flex items-center gap-3">
         <span className="text-xs text-white/30 font-mono-tech w-24 shrink-0 truncate">{s.map}</span>
         <div className="flex-1">
-          <PlayerBar value={s.players} max={s.max} color={gameColor} />
+          <PlayerBar value={s.online} max={s.max_players} color={isOffline ? "#ff3030" : color} />
         </div>
       </div>
       <div className="mt-2 flex items-center gap-2">
-        <span className="text-xs text-white/25">Активность:</span>
+        <span className="text-xs text-white/25">Заполненность:</span>
         <div className="flex-1 h-0.5 bg-white/5 rounded overflow-hidden">
-          <div className="h-full rounded" style={{ width: `${s.activity}%`, background: `linear-gradient(90deg, ${gameColor}55, ${gameColor})` }} />
+          <div className="h-full rounded transition-all duration-700"
+            style={{ width: `${s.activity}%`, background: `linear-gradient(90deg, ${color}55, ${color})` }} />
         </div>
-        <span className="font-mono-tech text-xs" style={{ color: gameColor }}>{s.activity}%</span>
+        <span className="font-mono-tech text-xs" style={{ color }}>{s.activity}%</span>
       </div>
     </div>
   );
@@ -110,19 +110,29 @@ export default function Index() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Данные из БД
+  // Данные
   const [dbNews, setDbNews] = useState<DbNews[]>([]);
-  const [dbServers, setDbServers] = useState<DbServer[]>([]);
+  const [liveServers, setLiveServers] = useState<LiveServer[]>([]);
   const [dbUpdates, setDbUpdates] = useState<DbUpdate[]>([]);
+  const [liveLoading, setLiveLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  const loadLive = () => {
+    fetchLiveServers()
+      .then(s => { setLiveServers(s); setLastUpdated(new Date()); setLiveLoading(false); })
+      .catch(() => setLiveLoading(false));
+  };
 
   useEffect(() => {
     setMounted(true);
-    const t = setInterval(() => setTime(new Date()), 1000);
-    // Загружаем данные из БД
+    const clock = setInterval(() => setTime(new Date()), 1000);
+    // Статичные данные — один раз
     fetchNews().then(setDbNews).catch(() => {});
-    fetchServers().then(setDbServers).catch(() => {});
     fetchUpdates().then(setDbUpdates).catch(() => {});
-    return () => clearInterval(t);
+    // Live-данные — при загрузке и каждые 30 сек
+    loadLive();
+    const liveTimer = setInterval(loadLive, 30000);
+    return () => { clearInterval(clock); clearInterval(liveTimer); };
   }, []);
 
   const scrollTo = (id: string) => {
@@ -136,14 +146,11 @@ export default function Index() {
   const newsWithColor = dbNews.map(n => ({ ...n, gameColor: gameColor(n.game), hot: n.is_hot }));
   const filteredNews = filterGame === "all" ? newsWithColor : newsWithColor.filter((n) => n.game === filterGame);
 
-  // Серверы текущей игры с моковыми данными онлайна
+  // Live-серверы текущей игры (сортируем по онлайну — рейтинг по активности)
   const currentGame = GAMES.find((g) => g.id === selectedGame)!;
-  const servers: ServerData[] = dbServers
+  const servers = liveServers
     .filter(s => s.game === selectedGame)
-    .map((s, i) => {
-      const stats = mockServerStats(s.id, s.max_players);
-      return { name: s.name, map: s.map, players: stats.players, max: s.max_players, ping: stats.ping, uptime: stats.uptime, activity: stats.activity, rank: i + 1 };
-    });
+    .sort((a, b) => b.online - a.online);
 
   // Обновления — группируем по игре, берём последнее
   const updatesGrouped = GAMES.map(g => {
@@ -154,12 +161,12 @@ export default function Index() {
   }).filter(Boolean) as { game: string; version: string; date: string; color: string; items: string[] }[];
 
   // Статистика
-  const totalServers = dbServers.length;
-  const totalPlayers = dbServers.reduce((acc, s) => acc + mockServerStats(s.id, s.max_players).players, 0);
+  const onlineServers = liveServers.filter(s => s.status !== "offline").length;
+  const totalPlayers = liveServers.reduce((acc, s) => acc + (s.online || 0), 0);
   const GLOBAL_STATS = [
-    { label: "Серверов онлайн", value: totalServers ? totalServers.toString() : "—", icon: "Server", color: "#00ff41" },
-    { label: "Игроков сейчас", value: totalPlayers ? totalPlayers.toLocaleString("ru-RU") : "—", icon: "Users", color: "#00bfff" },
-    { label: "Пиковый онлайн", value: "127 891", icon: "TrendingUp", color: "#ff6600" },
+    { label: "Серверов онлайн", value: liveLoading ? "..." : onlineServers.toString(), icon: "Server", color: "#00ff41" },
+    { label: "Игроков сейчас", value: liveLoading ? "..." : totalPlayers.toLocaleString("ru-RU"), icon: "Users", color: "#00bfff" },
+    { label: "Обновлено", value: lastUpdated ? lastUpdated.toLocaleTimeString("ru-RU") : "...", icon: "RefreshCw", color: "#ff6600" },
     { label: "Игр мониторится", value: "3", icon: "Gamepad2", color: "#ff3030" },
   ];
 
@@ -291,7 +298,7 @@ export default function Index() {
                       <div className="flex items-center gap-1.5">
                         <OnlineDot color={g.color} />
                         <span className="font-mono-tech text-xs" style={{ color: g.color }}>
-                          {dbServers.filter(s => s.game === g.id).reduce((a, s) => a + mockServerStats(s.id, s.max_players).players, 0)} online
+                          {liveServers.filter(s => s.game === g.id).reduce((a, s) => a + s.online, 0)} online
                         </span>
                       </div>
                     </div>
@@ -310,9 +317,19 @@ export default function Index() {
             <div className="w-1 h-8 rounded" style={{ background: "var(--neon-green)", boxShadow: "0 0 10px var(--neon-green)" }} />
             <h2 className="text-4xl font-black tracking-widest" style={{ fontFamily: "Oswald" }}>СЕРВЕРЫ</h2>
             <div className="flex-1 h-px hidden md:block" style={{ background: "linear-gradient(90deg, rgba(0,255,65,0.3), transparent)" }} />
-            <div className="flex items-center gap-2">
-              <OnlineDot />
-              <span className="font-mono-tech text-xs" style={{ color: "var(--neon-green)" }}>LIVE</span>
+            <div className="flex items-center gap-3">
+              <button onClick={loadLive}
+                className="flex items-center gap-1.5 font-mono-tech text-xs px-2 py-1 rounded-sm transition-all hover:opacity-80"
+                style={{ color: "var(--neon-green)", border: "1px solid rgba(0,255,65,0.3)", background: "rgba(0,255,65,0.06)" }}>
+                <Icon name="RefreshCw" size={11} />
+                ОБНОВИТЬ
+              </button>
+              <div className="flex items-center gap-1.5">
+                <OnlineDot />
+                <span className="font-mono-tech text-xs" style={{ color: "var(--neon-green)" }}>
+                  {lastUpdated ? `обновлено ${lastUpdated.toLocaleTimeString("ru-RU")}` : "LIVE"}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -335,10 +352,20 @@ export default function Index() {
             ))}
           </div>
 
+          {liveLoading && (
+            <div className="text-center py-8 font-mono-tech text-xs" style={{ color: "var(--neon-green)" }}>
+              ПОЛУЧЕНИЕ ДАННЫХ...
+            </div>
+          )}
           <div className="grid md:grid-cols-2 gap-2">
-            {servers.map((s) => (
-              <ServerRow key={s.name} s={s} gameColor={currentGame.color} />
+            {servers.map((s, i) => (
+              <ServerRow key={s.id} s={s} color={currentGame.color} rank={i + 1} />
             ))}
+            {!liveLoading && servers.length === 0 && (
+              <div className="col-span-2 text-center py-8 text-white/30 font-mono-tech text-sm">
+                Нет серверов. Добавьте серверы в <a href="/admin" className="underline" style={{ color: "var(--neon-green)" }}>панели управления</a>.
+              </div>
+            )}
           </div>
 
           <div className="mt-6 flex flex-wrap gap-6 text-xs text-white/25 font-mono-tech">
@@ -462,11 +489,10 @@ export default function Index() {
           <h3 className="text-xl font-bold tracking-wider mb-4 text-white/60" style={{ fontFamily: "Oswald" }}>РЕЙТИНГ ПО АКТИВНОСТИ</h3>
           <div className="grid md:grid-cols-3 gap-6">
             {GAMES.map((g) => {
-              const gameServers = dbServers.filter(s => s.game === g.id);
-              const serverStats = gameServers.map(s => mockServerStats(s.id, s.max_players));
-              const totalPlayers = serverStats.reduce((a, s) => a + s.players, 0);
+              const gameServers = liveServers.filter(s => s.game === g.id);
+              const totalPlayers = gameServers.reduce((a, s) => a + s.online, 0);
               const totalMax = gameServers.reduce((a, s) => a + s.max_players, 0);
-              const avgActivity = serverStats.length ? Math.round(serverStats.reduce((a, s) => a + s.activity, 0) / serverStats.length) : 0;
+              const avgActivity = gameServers.length ? Math.round(gameServers.reduce((a, s) => a + s.activity, 0) / gameServers.length) : 0;
               const pct = totalMax ? Math.round((totalPlayers / totalMax) * 100) : 0;
 
               return (
